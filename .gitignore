@@ -1,2 +1,4 @@
 src/*
+Clinical_Information/*
 All247images/*
+*.tfrecords

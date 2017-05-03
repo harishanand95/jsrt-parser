@@ -1,9 +1,8 @@
 import numpy as np
-# from scipy.misc import imresize, imread
 import matplotlib.pyplot as plt
 from csv import reader, excel_tab
 from os import listdir
-
+import tensorflow as tf
 
 class JsrtImage(object):
     """ JSRTImage object provides the image and its descriptions in a bundled format. Descriptions for the image include
@@ -37,11 +36,32 @@ class JsrtImage(object):
         return self
 
     @property
+    def subtlety(self):
+        return self._degree_of_subtlety
+
+    @property
+    def diagnosis(self):
+        return self._diagnosis
+
+    @property
+    def nodule_size(self):
+        return self._nodule_size
+
+    @property
+    def x(self):
+        return self._x_coordinate
+
+    @property
+    def y(self):
+        return self._y_coordinate
+
+    @property
     def image_type(self):
-        if "JPCLN" in self.image_path:
-            self._image_type = "has-nodule"
-        else:
-            self._image_type = "non-nodule"
+        if self._image_type is None:
+            if "JPCLN" in self.image_path:
+                self._image_type = "has-nodule"
+            else:
+                self._image_type = "non-nodule"
         return self._image_type
 
     @image_type.setter
@@ -77,14 +97,14 @@ class JsrtImage(object):
         if has_nodule is True:
             self.image_type = "has nodule"
             self._degree_of_subtlety = data[1]
-            self._nodule_size = data[2]
-            self._age = data[3]
-            self._sex = data[4]
-            self._x_coordinate = data[5]
-            self._y_coordinate = data[6]
-            self._malignant_or_benign = data[7]
-            self._position = data[8]
-            self._diagnosis = data[9]
+            self._nodule_size = int(data[2])
+            self._age = int(data[3] if data[3] != "?" else 0)
+            self._sex = str(data[4])
+            self._x_coordinate = int(data[5])
+            self._y_coordinate = int(data[6])
+            self._malignant_or_benign = str(data[7])
+            self._position = str(data[8])
+            self._diagnosis = str(data[9])
 
         elif has_nodule is False:
             self._image_type = "non-nodule"
@@ -93,7 +113,7 @@ class JsrtImage(object):
 
 
 class Jsrt(object):
-    """ JSRT is a model to fetch all the images and augment them. """
+    """ Jsrt is a model to fetch all the images and augment them. """
 
     def __init__(self, images_path):
         self._images_dir = images_path
@@ -123,7 +143,7 @@ class Jsrt(object):
         Args:
             filenames (list): a list of names of the image files.
             directory  (str): path to the directory/folder where all images are present
-        Returns :
+        Returns:
             a list of JsrtImage objects
         """
         images_list = []
@@ -182,15 +202,11 @@ class Jsrt(object):
         csv_data = self.clean_csv_file("Clinical_Information/CLNDAT_EN.txt", "nodule csv")
 
         for image in self._has_nodule_image_list:
-            print image.image_path
-            print csv_data[image.image_path]
             image.add_description(csv_data[image.image_path], has_nodule=True)
 
         csv_data = self.clean_csv_file("Clinical_Information/CNNDAT_EN.TXT", "non nodule csv")
 
         for image in self._non_nodule_image_list:
-            print image.image_path
-            print csv_data[image.image_path]
             image.add_description(csv_data[image.image_path], has_nodule=False)
 
     def get_images(self, has_nodule=True, num_of_images=1):
@@ -202,7 +218,7 @@ class Jsrt(object):
                                 images without nodules are selected when it is set to False.
             num_of_images (int): Defaults to 1. The required number of images is given.
 
-        Returns :
+        Returns:
             a list of JsrtImage objects. Total objects will be num_of_images.
         """
         if has_nodule is True:
@@ -216,8 +232,46 @@ class Jsrt(object):
                 return -1
             return self._non_nodule_image_list[:num_of_images]
 
+    @staticmethod
+    def save_images(dataset, filename):
+        """This function saves the jsrt image dataset into TFRecords format. Currently the function stores only the
+        image, its height, width, x and y coordinates of the nodule.
 
-dataset = Jsrt("./All247images/")
-pic = dataset.get_images()
-# pic[0].display_all_data()
+        Args:
+            dataset (list): A list of JsrtImage objects to be stored in tfrecords format.
+            filename (str): name of the tfrecords file.
 
+        Examples:
+            jsrtdata = Jsrt("./All247images/")
+            train_images = jsrtdata.get_images(num_of_images=50)
+            jsrtdata.save_images(train_images, "train_images.tfrecords")
+        """
+        writer = tf.python_io.TFRecordWriter(filename)
+
+        def _bytes_feature(value):
+            return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+
+        def _int64_feature(value):
+            return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
+        for jsrtimage in dataset:
+            img = jsrtimage.image.tostring()
+            height = jsrtimage.image_height
+            width = jsrtimage.image_width
+            x = jsrtimage.x
+            y = jsrtimage.y
+
+            example = tf.train.Example(features=tf.train.Features(feature={
+                'height': _int64_feature(height),
+                'width': _int64_feature(width),
+                'x': _int64_feature(x),
+                'y': _int64_feature(y),
+                'image': _bytes_feature(img)}))
+
+            writer.write(example.SerializeToString())
+        writer.close()
+
+
+jsrtdata = Jsrt("./All247images/")
+pic = jsrtdata.get_images(num_of_images=50)
+jsrtdata.save_images(pic, "test.tfrecords")
