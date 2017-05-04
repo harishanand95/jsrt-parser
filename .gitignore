@@ -1,4 +1,4 @@
 src/*
-Clinical_Information/*
-All247images/*
+.idea/*
+.DS_Store
 *.tfrecords
