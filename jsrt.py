@@ -4,33 +4,41 @@ from csv import reader, excel_tab
 from os import listdir
 import tensorflow as tf
 
+
 class JsrtImage(object):
     """ JSRTImage object provides the image and its descriptions in a bundled format. Descriptions for the image include
      filename, nodule size [mm], degree of subtlety, x and y coordinates of the nodule location, age, sex, malignant
       or benign, anatomic location, and diagnosis. """
 
-    def __init__(self, path):
+    def __init__(self):
         self.image = None
-        self.image_path = path
+        self.image_path = None
         self.image_height = None
         self.image_width = None
         self._image_type = None
         self._malignant_or_benign = None
         self._nodule_size = None
         self._degree_of_subtlety = None
-        self._x_coordinate = None
-        self._y_coordinate = None
+        self._x_coordinate = -1
+        self._y_coordinate = -1
         self._diagnosis = None
         self._age = None
         self._sex = None
         self._position = None
-        self.load()
 
-    def load(self):
+    def load_image(self, image, height, width, x, y):
+        self.image = image
+        self.image_height = height
+        self.image_width = width
+        self._x_coordinate = x
+        self._y_coordinate = y
+        return self
+
+    def load_from_file(self, path):
         """ Image is of size 2048x2048 in gray scale stored in 16 bit unsigned int in big endian format. """
-        raw_image = np.fromfile(self.image_path, dtype=">i2").reshape((2048, 2048))
-        raw_image.shape = (2048, 2048)
-        self.image = raw_image
+        self.image_path = path
+        self.image = np.fromfile(self.image_path, dtype=">i2").reshape((2048, 2048))
+        self.image.shape = (2048, 2048)
         self.image_height = 2048
         self.image_width = 2048
         return self
@@ -110,17 +118,26 @@ class JsrtImage(object):
             self._image_type = "non-nodule"
             self._age = data[1]
             self._sex = data[2]
+            self._x_coordinate = -1
+            self._y_coordinate = -1
 
 
 class Jsrt(object):
     """ Jsrt is a model to fetch all the images and augment them. """
 
-    def __init__(self, images_path):
-        self._images_dir = images_path
+    def __init__(self):
+        self._images_dir = None
         self._has_nodule_image_list = None
         self._non_nodule_image_list = None
+        self.test_dataset = None
+        self.valid_dataset = None
+        self.train_dataset = None
+
+    def load_images(self, images_path):
+        self._images_dir = images_path
         self.__get_images_list()
         self.add_descriptions_to_image()
+        return self
 
     def __get_images_list(self):
         images_list = listdir(self._images_dir)
@@ -148,7 +165,8 @@ class Jsrt(object):
         """
         images_list = []
         for image_name in filenames:
-            img = JsrtImage(directory + image_name)
+            img = JsrtImage()
+            img.load_from_file(directory + image_name)
             images_list.append(img)
         return images_list
 
@@ -242,10 +260,13 @@ class Jsrt(object):
             filename (str): name of the tfrecords file.
 
         Examples:
-            jsrtdata = Jsrt("./All247images/")
+            jsrtdata = Jsrt().read_images("./All247images/")
             train_images = jsrtdata.get_images(num_of_images=50)
             jsrtdata.save_images(train_images, "train_images.tfrecords")
         """
+        if dataset is None:
+            raise ValueError('None obtained as dataset value')
+
         writer = tf.python_io.TFRecordWriter(filename)
 
         def _bytes_feature(value):
@@ -271,7 +292,81 @@ class Jsrt(object):
             writer.write(example.SerializeToString())
         writer.close()
 
+    def save_test_dataset(self, filename):
+        self.save_images(self.test_dataset, filename)
 
-jsrtdata = Jsrt("./All247images/")
-pic = jsrtdata.get_images(num_of_images=50)
-jsrtdata.save_images(pic, "test.tfrecords")
+    def save_train_dataset(self, filename):
+        self.save_images(self.train_dataset, filename)
+
+    def save_valid_dataset(self, filename):
+        self.save_images(self.valid_dataset, filename)
+
+    @staticmethod
+    def read_images(filename):
+        """This function reads the JsrtImage objects stored in TFrecords file. Currently function only reads the
+        image, its height, width, x and y coordinates of the nodule.
+
+        Args:
+            filename (str): Path to the tfrecords file
+
+        Returns:
+            jsrt_image_list (list): A list of JsrtImage objects having image, height, width, x and y coordinate set up.
+
+        Examples:
+            jsrtdata = Jsrt().load_images("./All247images/")
+            save_pic = jsrtdata.get_images(num_of_images=1)
+            jsrtdata.save_images(save_pic, "test.tfrecords")
+
+            read_pic = jsrtdata.read_images("test.tfrecords")
+
+            print np.allclose(save_pic[0].image, read_pic[0].image)
+            if save_pic[0].image_height == read_pic[0].image_height: print "True"
+            if save_pic[0].image_width == read_pic[0].image_width: print "True"
+            if save_pic[0].x == read_pic[0].x: print "True"
+            if save_pic[0].y == read_pic[0].y: print "True"
+
+            You should get 5 True statements as result which confirms that values are same.
+
+        """
+        records = tf.python_io.tf_record_iterator(path=filename)
+        jsrt_image_list = []
+        for string_record in records:
+            example = tf.train.Example()
+            example.ParseFromString(string_record)
+            height = int(example.features.feature['height']
+                         .int64_list
+                         .value[0])
+
+            width = int(example.features.feature['width']
+                        .int64_list
+                        .value[0])
+            x = int(example.features.feature['x']
+                         .int64_list
+                         .value[0])
+
+            y = int(example.features.feature['y']
+                        .int64_list
+                        .value[0])
+            img_string = (example.features.feature['image']
+                          .bytes_list
+                          .value[0])
+            image = np.fromstring(img_string, dtype=">i2").reshape((height, width))
+            image.shape = (height, width)
+            img = JsrtImage()
+            img.load_image(image, height, width, x, y)
+            jsrt_image_list.append(img)
+        return jsrt_image_list
+
+    def read_test_dataset(self, filename):
+        self.test_dataset = self.read_images(filename)
+
+    def read_train_dataset(self, filename):
+        self.train_dataset = self.read_images(filename)
+
+    def read_valid_dataset(self, filename):
+        self.valid_dataset = self.read_images(filename)
+
+
+jsrtdata = Jsrt().load_images("./All247images/")
+save_pic = jsrtdata.get_images(num_of_images=1)
+jsrtdata.save_images(save_pic, "test.tfrecords")
