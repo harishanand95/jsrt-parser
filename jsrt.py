@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from csv import reader, excel_tab
 from os import listdir
 import tensorflow as tf
@@ -37,8 +38,9 @@ class JsrtImage(object):
     def load_from_file(self, path):
         """ Image is of size 2048x2048 in gray scale stored in 16 bit unsigned int in big endian format. """
         self.image_path = path
-        self.image = np.fromfile(self.image_path, dtype=">i2").reshape((2048, 2048))
-        self.image.shape = (2048, 2048)
+        raw_image = np.fromfile(self.image_path, dtype=">i2").reshape((2048, 2048))
+        raw_image.shape = (2048, 2048)
+        self.image = raw_image
         self.image_height = 2048
         self.image_width = 2048
         return self
@@ -77,20 +79,16 @@ class JsrtImage(object):
         self._image_type = value
 
     def display(self):
+        # Spectral yellow color at a range 0.5 is used.
+        # https://matplotlib.org/mpl_examples/color/colormaps_reference_02.png
+        cmap = cm.get_cmap('Spectral')
+        rgba = cmap(0.5)
+        # CT image is in gray scale.
         plt.imshow(self.image, cmap=plt.get_cmap('gray'))
+        # We plot a circle at x, y of size 500 with opacity 0.1 and color rgba=cmap(0.5) on Spectral
+        plt.scatter([self._x_coordinate], [self._y_coordinate], s=500, c=rgba, alpha=0.1)
         plt.show()
         return self
-
-    # def display_all_data(self):
-    #     print self._degree_of_subtlety
-    #     print self._nodule_size
-    #     print self._age
-    #     print self._sex
-    #     print self._x_coordinate
-    #     print self._y_coordinate
-    #     print self._malignant_or_benign
-    #     print self._position
-    #     print self._diagnosis
 
     def add_description(self, data, has_nodule=False):
         """This function adds additional details to the JsrtImage object.
@@ -140,7 +138,7 @@ class Jsrt(object):
         return self
 
     def __get_images_list(self):
-        images_list = listdir(self._images_dir)
+        images_list = [f for f in listdir(self._images_dir) if not f.startswith('.')]
         _has_nodule_files = []
         _non_nodule_files = []
         # Non-nodule and has-nodule filename are separated based on filename.
@@ -340,13 +338,8 @@ class Jsrt(object):
             width = int(example.features.feature['width']
                         .int64_list
                         .value[0])
-            x = int(example.features.feature['x']
-                         .int64_list
-                         .value[0])
-
-            y = int(example.features.feature['y']
-                        .int64_list
-                        .value[0])
+            x = int(example.features.feature['x'].int64_list.value[0])
+            y = int(example.features.feature['y'].int64_list.value[0])
             img_string = (example.features.feature['image']
                           .bytes_list
                           .value[0])
@@ -369,4 +362,5 @@ class Jsrt(object):
 
 jsrtdata = Jsrt().load_images("./All247images/")
 save_pic = jsrtdata.get_images(num_of_images=1)
+save_pic[0].display()
 jsrtdata.save_images(save_pic, "test.tfrecords")
