@@ -1,5 +1,5 @@
 # jsrt-parser
-This is a data parser to obtain images and descriptions from JSRT database in a uniform format.
+This is a data parser to obtain images and descriptions from JSRT database in a uniform format for deep learning applications.
 
 Expected features:
 - [ ]  Scale, rotate and resize images to augment the dataset.
