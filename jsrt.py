@@ -4,13 +4,14 @@ import matplotlib.cm as cm
 from csv import reader, excel_tab
 from os import listdir
 import tensorflow as tf
+import copy
 
 
 class JsrtImage(object):
     """ JSRTImage object provides the image and its descriptions in a bundled format. Descriptions for the image include
      filename, nodule size [mm], degree of subtlety, x and y coordinates of the nodule location, age, sex, malignant
-      or benign, anatomic location, and diagnosis. """
-
+      or benign, anatomic location, and diagnosis.
+    """
     def __init__(self):
         self.image = None
         self.image_path = None
@@ -69,7 +70,7 @@ class JsrtImage(object):
     def image_type(self):
         if self._image_type is None:
             if "JPCLN" in self.image_path:
-                self._image_type = "has-nodule"
+                self._image_type = "has nodule"
             else:
                 self._image_type = "non-nodule"
         return self._image_type
@@ -78,16 +79,20 @@ class JsrtImage(object):
     def image_type(self, value):
         self._image_type = value
 
-    def display(self):
+    def display(self, opacity=0.1, nodule_marking=True):
         # Spectral yellow color at a range 0.5 is used.
         # https://matplotlib.org/mpl_examples/color/colormaps_reference_02.png
-        cmap = cm.get_cmap('Spectral')
-        rgba = cmap(0.5)
-        # CT image is in gray scale.
-        plt.imshow(self.image, cmap=plt.get_cmap('gray'))
-        # We plot a circle at x, y of size 500 with opacity 0.1 and color rgba=cmap(0.5) on Spectral
-        plt.scatter([self._x_coordinate], [self._y_coordinate], s=500, c=rgba, alpha=0.1)
-        plt.show()
+        if nodule_marking is True:
+            cmap = cm.get_cmap('Spectral')
+            rgba = cmap(0.5)
+            # CT image is in gray scale.
+            plt.imshow(self.image, cmap=plt.get_cmap('gray'))
+            # We plot a circle at x, y of size 500 with opacity 0.1 and color rgba=cmap(0.5) on Spectral
+            plt.scatter([self._x_coordinate], [self._y_coordinate], s=500, c=rgba, alpha=opacity)
+            plt.show()
+        else:
+            plt.imshow(self.image, cmap=plt.get_cmap('gray'))
+            plt.show()
         return self
 
     def add_description(self, data, has_nodule=False):
@@ -101,7 +106,7 @@ class JsrtImage(object):
             has_nodule (bool): True for images with nodules and False for images without nodules.
         """
         if has_nodule is True:
-            self.image_type = "has nodule"
+            self._image_type = "has nodule"
             self._degree_of_subtlety = data[1]
             self._nodule_size = int(data[2])
             self._age = int(data[3] if data[3] != "?" else 0)
@@ -118,10 +123,53 @@ class JsrtImage(object):
             self._sex = data[2]
             self._x_coordinate = -1
             self._y_coordinate = -1
+        return self
+
+    def get_all_details(self):
+        full_details = []
+        if self._image_type == "has nodule":
+            full_details.append(self.image_path)
+            full_details.append(self._degree_of_subtlety)
+            full_details.append(self._nodule_size)
+            full_details.append(self._age)
+            full_details.append(self._sex)
+            full_details.append(self._x_coordinate)
+            full_details.append(self._y_coordinate)
+            full_details.append(self._malignant_or_benign)
+            full_details.append(self._position)
+            full_details.append(self._diagnosis)
+
+        elif self._image_type == "non-nodule":
+            full_details.append(self.image_path)
+            full_details.append(self._age)
+            full_details.append(self._sex)
+            full_details.append(self._x_coordinate)
+            full_details.append(self._y_coordinate)
+        return full_details
+
+    def horizontal_reflection(self):
+        """ This function does a horizontal flip of the image and changes the x coordinate of the lung nodule
+         if present. Also the function changes the doctors diagnosis position from "left" to "right" or vice-versa
+         similar to the flip.
+        """
+        # np.fliplr - Flips array in the left/right direction.
+        self.image = np.fliplr(self.image)
+        if self._image_type == "has nodule":
+            # New position of the lung nodule, after reflection
+            self._x_coordinate = self.image_width - self._x_coordinate
+            if "left" in self._position:
+                self._position = self._position.replace("left", "right")
+            elif "l." in self._position:
+                self._position = self._position.replace("l.", "r.")
+            elif "right" in self._position:
+                self._position = self._position.replace("right", "left")
+            elif "r." in self._position:
+                self._position = self._position.replace("r.", "l.")
+        return self
 
 
 class Jsrt(object):
-    """ Jsrt is a model to fetch all the images and augment them. """
+    """ Jsrt is a model to fetch all the images and augment them."""
 
     def __init__(self):
         self._images_dir = None
@@ -359,8 +407,52 @@ class Jsrt(object):
     def read_valid_dataset(self, filename):
         self.valid_dataset = self.read_images(filename)
 
+    @staticmethod
+    def horizontally_reflect_images(image_list):
+        """ This function does a horizontal flip of the images present in the image_list given and also changes
+        the x coordinate of the lung nodule in the image appropriately (if present).
+
+        See Also: JsrtImage.horizontal_reflection
+
+        Args:
+            image_list (list): A list of JsrtImage objects
+
+        Returns:
+            new_image_list (list): A list of JsrtImage objects that are horizontally flipped.
+
+        """
+        new_image_list = []
+        for image in image_list:
+            new_image = copy.copy(image)
+            new_image.horizontal_reflection()
+            new_image_list.append(new_image)
+        return new_image_list
+
+    def augment_images(self, horizontal_reflection=True):
+        """ This function attempts to augment Jsrt images (to increase the dataset) by applying a number of image
+        transformations.
+            1. Horizontal reflection. To do horizontal refection of the non-nodule and has-nodules images loaded
+                pass horizontal_reflection parameter as "True".
+
+        Args:
+            horizontal_reflection (bool): Defaults to True. Function does horizontal reflection over the images stored
+            in _non_nodule_image_list and _has_nodule_image_list and adds the new images to them.
+            See Also: horizontally_reflect_images
+
+        """
+        if horizontal_reflection is True:
+            new_non_nodule_image_list = self.horizontally_reflect_images(self._non_nodule_image_list)
+            self._non_nodule_image_list += new_non_nodule_image_list
+            new_has_nodule_image_list = self.horizontally_reflect_images(self._has_nodule_image_list)
+            self._has_nodule_image_list += new_has_nodule_image_list
+            print "Total images after horizontal flip in non nodule case is " +\
+                  str(len(self._non_nodule_image_list)) +\
+                  " and has nodule case is " +\
+                  str(len(self._has_nodule_image_list))
+
 
 jsrtdata = Jsrt().load_images("./All247images/")
-save_pic = jsrtdata.get_images(num_of_images=1)
-save_pic[0].display()
-jsrtdata.save_images(save_pic, "test.tfrecords")
+# non_nodule = jsrtdata.get_images(num_of_images=1, has_nodule=False)[0]
+# has_nodule = jsrtdata.get_images(num_of_images=90, has_nodule=True)[40]
+jsrtdata.augment_images()
+
