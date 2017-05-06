@@ -3,6 +3,22 @@ This is a data parser to obtain images and descriptions from JSRT database in a 
 
 Expected features:
 - [ ]  Scale, rotate and resize images to augment the dataset.
+
+        The training and validation sets will be augmented by applying a number of image transformations: 
+            1. Horizontal reflection
+            2. Rotation by 2°-10°
+            3. Translation of 3 pixels in cardinal or ordinal directions (Optional: not sure of its consequence to image)
+            4. Pixel spread (swap each pixel with a random adjacent pixel)
+            5. Noise reduction (replace each pixel with the value just before or after the median value in a neighborhood of 2 or 5 pixels)
+            6. Random noise addition.
+            
+     In total, each image can serve as the progenitor of 106 child images with the label inherited from the parent image. 
+     
+     This is an attempt to augment the images similar to the one mentioned in High-Throughput Classification of Radiographs Using Deep Convolutional Neural Networks by Alvin Rajkomar & Sneha Lingam & Andrew G. Taylor & Michael Blum & John Mongan.
+     
+     https://link.springer.com/article/10.1007/s10278-016-9914-9
+
+
 - [ ]  Get random X type of images or just a random mix of images from dataset.
 - [x]  Get image description and other attributes associated with each image.
 
