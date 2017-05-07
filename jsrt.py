@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import ndimage
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from csv import reader, excel_tab
@@ -9,8 +10,8 @@ import copy
 
 class JsrtImage(object):
     """ JSRTImage object provides the image and its descriptions in a bundled format. Descriptions for the image include
-     filename, nodule size [mm], degree of subtlety, x and y coordinates of the nodule location, age, sex, malignant
-      or benign, anatomic location, and diagnosis.
+    filename, nodule size [mm], degree of subtlety, x and y coordinates of the nodule location, age, sex, malignant
+    or benign, anatomic location, and diagnosis.
     """
     def __init__(self):
         self.image = None
@@ -149,8 +150,8 @@ class JsrtImage(object):
 
     def horizontal_reflection(self):
         """ This function does a horizontal flip of the image and changes the x coordinate of the lung nodule
-         if present. Also the function changes the doctors diagnosis position from "left" to "right" or vice-versa
-         similar to the flip.
+        if present. Also the function changes the doctors diagnosis position from "left" to "right" or vice-versa
+        similar to the flip.
         """
         # np.fliplr - Flips array in the left/right direction.
         self.image = np.fliplr(self.image)
@@ -165,6 +166,12 @@ class JsrtImage(object):
                 self._position = self._position.replace("right", "left")
             elif "r." in self._position:
                 self._position = self._position.replace("r.", "l.")
+        return self
+
+    def rotate(self, degrees):
+        image_rotated = ndimage.rotate(self.image, degrees, mode='nearest')
+        self.image = image_rotated[:2048, :2048]
+        # TODO correct the location of the X coordinate.
         return self
 
 
@@ -449,10 +456,3 @@ class Jsrt(object):
                   str(len(self._non_nodule_image_list)) +\
                   " and has nodule case is " +\
                   str(len(self._has_nodule_image_list))
-
-
-jsrtdata = Jsrt().load_images("./All247images/")
-# non_nodule = jsrtdata.get_images(num_of_images=1, has_nodule=False)[0]
-# has_nodule = jsrtdata.get_images(num_of_images=90, has_nodule=True)[40]
-jsrtdata.augment_images()
-
