@@ -6,6 +6,7 @@ from csv import reader, excel_tab
 from os import listdir
 import tensorflow as tf
 import copy
+import math
 
 
 class JsrtImage(object):
@@ -169,9 +170,51 @@ class JsrtImage(object):
         return self
 
     def rotate(self, degrees):
-        image_rotated = ndimage.rotate(self.image, degrees, mode='nearest')
+        """ This function does a counter clockwise rotation of image to the amount of degrees given. It uses
+        scipy.ndimage's rotate function to rotate the image. The function also adjusts the position of the x and
+        y coordinate of the nodule correctly.
+
+        HACK: get_rotate_mat function is actually the code from scipy.ndimage.rotate function to get the rotation matrix
+        that was used for image transformation. This helps to get the new coordinates of the lung nodule in the
+        rotated image.
+
+        https://github.com/scipy/scipy/blob/bcbb9381bc5cf7868b2f96c59302ef04faafa6d9/scipy/ndimage/interpolation.py#L658-784
+
+        Args:
+            degrees (int): rotation angle in degrees. If a negative value is given, then clockwise rotation occurs.
+
+        Returns:
+            None
+            ( Existing image is rotated by degrees amount and new coordinates of lung nodule are added. )
+
+        """
+        image_rotated = ndimage.rotate(self.image, degrees, mode="nearest", reshape=False)
+
+        def get_rotate_mat(shape, angle):
+            m11 = math.cos(angle)
+            m12 = math.sin(angle)
+            m21 = -math.sin(angle)
+            m22 = math.cos(angle)
+            matrix = np.array([[m11, m12], [m21, m22]], dtype=np.float64)
+            iy = shape[0]
+            ix = shape[1]
+            oy = shape[0]
+            ox = shape[1]
+            offset = np.zeros((2,), dtype=np.float64)
+            offset[0] = float(oy) / 2.0 - 0.5
+            offset[1] = float(ox) / 2.0 - 0.5
+            offset = np.dot(matrix, offset)
+            tmp = np.zeros((2,), dtype=np.float64)
+            tmp[0] = float(iy) / 2.0 - 0.5
+            tmp[1] = float(ix) / 2.0 - 0.5
+            offset = tmp - offset
+            return offset, matrix
+
+        off, mat = get_rotate_mat(self.image.shape, np.deg2rad(degrees))
+        a = np.dot(mat, [[self._x_coordinate], [self._y_coordinate]])
+        self._x_coordinate = a[0][0] + off[0]
+        self._y_coordinate = a[1][0] + off[1]
         self.image = image_rotated[:2048, :2048]
-        # TODO correct the location of the X coordinate.
         return self
 
 
