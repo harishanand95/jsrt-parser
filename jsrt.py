@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from scipy import ndimage
 import matplotlib.pyplot as plt
@@ -189,32 +190,32 @@ class JsrtImage(object):
 
         """
         image_rotated = ndimage.rotate(self.image, degrees, mode="nearest", reshape=False)
-
-        def get_rotate_mat(shape, angle):
-            m11 = math.cos(angle)
-            m12 = math.sin(angle)
-            m21 = -math.sin(angle)
-            m22 = math.cos(angle)
-            matrix = np.array([[m11, m12], [m21, m22]], dtype=np.float64)
-            iy = shape[0]
-            ix = shape[1]
-            oy = shape[0]
-            ox = shape[1]
-            offset = np.zeros((2,), dtype=np.float64)
-            offset[0] = float(oy) / 2.0 - 0.5
-            offset[1] = float(ox) / 2.0 - 0.5
-            offset = np.dot(matrix, offset)
-            tmp = np.zeros((2,), dtype=np.float64)
-            tmp[0] = float(iy) / 2.0 - 0.5
-            tmp[1] = float(ix) / 2.0 - 0.5
-            offset = tmp - offset
-            return offset, matrix
-
-        off, mat = get_rotate_mat(self.image.shape, np.deg2rad(degrees))
-        a = np.dot(mat, [[self._x_coordinate], [self._y_coordinate]])
-        self._x_coordinate = a[0][0] + off[0]
-        self._y_coordinate = a[1][0] + off[1]
         self.image = image_rotated[:2048, :2048]
+        if self._image_type == "has nodule":
+            def get_rotate_mat(shape, angle):
+                m11 = math.cos(angle)
+                m12 = math.sin(angle)
+                m21 = -math.sin(angle)
+                m22 = math.cos(angle)
+                matrix = np.array([[m11, m12], [m21, m22]], dtype=np.float64)
+                iy = shape[0]
+                ix = shape[1]
+                oy = shape[0]
+                ox = shape[1]
+                offset = np.zeros((2,), dtype=np.float64)
+                offset[0] = float(oy) / 2.0 - 0.5
+                offset[1] = float(ox) / 2.0 - 0.5
+                offset = np.dot(matrix, offset)
+                tmp = np.zeros((2,), dtype=np.float64)
+                tmp[0] = float(iy) / 2.0 - 0.5
+                tmp[1] = float(ix) / 2.0 - 0.5
+                offset = tmp - offset
+                return offset, matrix
+
+            off, mat = get_rotate_mat(self.image.shape, np.deg2rad(degrees))
+            a = np.dot(mat, [[self._x_coordinate], [self._y_coordinate]])
+            self._x_coordinate = a[0][0] + off[0]
+            self._y_coordinate = a[1][0] + off[1]
         return self
 
 
@@ -465,7 +466,7 @@ class Jsrt(object):
         See Also: JsrtImage.horizontal_reflection
 
         Args:
-            image_list (list): A list of JsrtImage objects
+            image_list (list): A list of JsrtImage objects.
 
         Returns:
             new_image_list (list): A list of JsrtImage objects that are horizontally flipped.
@@ -478,16 +479,53 @@ class Jsrt(object):
             new_image_list.append(new_image)
         return new_image_list
 
-    def augment_images(self, horizontal_reflection=True):
+    @staticmethod
+    def rotate_image(image_list, rotate_angles):
+        """This function does a rotation of the images present in the image_list with all angles given in rotate_angles
+        and it also changes the x coordinate and y coordinate of the lung nodule in the image appropriately.
+
+        See Also: JsrtImage.rotate
+
+        Args:
+        image_list (list): A list of all JsrtImage objects.
+        rotate_angles (list): A list of angles through which images in `image_list` are to be rotated.
+
+        Returns:
+            rotated_images_list (list): It is a list consisting of list of images rotated in given angle.
+            Example:
+                rotate_image([JsrtImage objects], [1, 2, -3]) # rotate by 1°(anti-clock), 2°(anti-clock), 3°(clockwise)
+                [[JsrtImage objects rotated by 1°],[JsrtImage objects rotated by 2°],[JsrtImage objects rotated by -3°]]
+
+        """
+        rotated_images_list = []
+        for angle in rotate_angles:
+            rotated_images_on_each_angle = []
+            for image in image_list:
+                new_image = copy.copy(image)
+                new_image.rotate(angle)
+                rotated_images_on_each_angle.append(new_image)
+            rotated_images_list.append(rotated_images_on_each_angle)
+        return rotated_images_list
+
+    def augment_images(self, horizontal_reflection=True, rotate=True, rotate_angles=[1, 2]):
         """ This function attempts to augment Jsrt images (to increase the dataset) by applying a number of image
         transformations.
             1. Horizontal reflection. To do horizontal refection of the non-nodule and has-nodules images loaded
                 pass horizontal_reflection parameter as "True".
+            2. Rotation. To do rotation of the non-nodule and has-nodule images loaded, pass the parameter "rotate" as
+                True and mention the rotation angles in rotate_angles list.
 
         Args:
             horizontal_reflection (bool): Defaults to True. Function does horizontal reflection over the images stored
             in _non_nodule_image_list and _has_nodule_image_list and adds the new images to them.
             See Also: horizontally_reflect_images
+
+            rotate (bool): Defaults to True. Function does the rotation of the image stored in _non_nodule_image_list
+            and _has_nodule_image_list and adds the new images to them.
+
+            rotate_angles (list): Defaults to [1, 2]. The angles (in degrees) through which images in
+            _non_nodule_image_list and _has_nodule_image_list will be rotated. A positive degree means counter-clockwise
+            rotation. Default rotation angles are 1° and 2°.
 
         """
         if horizontal_reflection is True:
@@ -496,6 +534,20 @@ class Jsrt(object):
             new_has_nodule_image_list = self.horizontally_reflect_images(self._has_nodule_image_list)
             self._has_nodule_image_list += new_has_nodule_image_list
             print "Total images after horizontal flip in non nodule case is " +\
+                  str(len(self._non_nodule_image_list)) +\
+                  " and has nodule case is " +\
+                  str(len(self._has_nodule_image_list))
+
+        print str(len(self._non_nodule_image_list))
+        print str(len(self._has_nodule_image_list))
+        if rotate is True:
+            rotated_images_list = self.rotate_image(self._non_nodule_image_list, rotate_angles=rotate_angles)
+            for images in rotated_images_list:
+                self._non_nodule_image_list += images
+            rotated_images_list = self.rotate_image(self._has_nodule_image_list, rotate_angles=rotate_angles)
+            for images in rotated_images_list:
+                self._has_nodule_image_list += images
+            print "Total images after rotation in non nodule case is " +\
                   str(len(self._non_nodule_image_list)) +\
                   " and has nodule case is " +\
                   str(len(self._has_nodule_image_list))
