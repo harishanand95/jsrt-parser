@@ -14,6 +14,7 @@ class JsrtImage(object):
     """ JSRTImage object provides the image and its descriptions in a bundled format. Descriptions for the image include
     filename, nodule size [mm], degree of subtlety, x and y coordinates of the nodule location, age, sex, malignant
     or benign, anatomic location, and diagnosis.
+
     """
     def __init__(self):
         self.image = None
@@ -99,7 +100,7 @@ class JsrtImage(object):
         return self
 
     def add_description(self, data, has_nodule=False):
-        """This function adds additional details to the JsrtImage object.
+        """ This function adds additional details to the JsrtImage object.
 
         Args:
             data       (list): data is a list of the form [filename, degree of subtlety, nodule size [mm], age, sex,
@@ -107,6 +108,7 @@ class JsrtImage(object):
                                for images with nodules and [filename, age, sex, diagnosis("non-nodule")] for non-nodule
                                images respectively.
             has_nodule (bool): True for images with nodules and False for images without nodules.
+
         """
         if has_nodule is True:
             self._image_type = "has nodule"
@@ -154,6 +156,7 @@ class JsrtImage(object):
         """ This function does a horizontal flip of the image and changes the x coordinate of the lung nodule
         if present. Also the function changes the doctors diagnosis position from "left" to "right" or vice-versa
         similar to the flip.
+
         """
         # np.fliplr - Flips array in the left/right direction.
         self.image = np.fliplr(self.image)
@@ -168,6 +171,7 @@ class JsrtImage(object):
                 self._position = self._position.replace("right", "left")
             elif "r." in self._position:
                 self._position = self._position.replace("r.", "l.")
+        print str(self.image_path) + " was horizontally reflected."
         return self
 
     def rotate(self, degrees):
@@ -216,6 +220,7 @@ class JsrtImage(object):
             a = np.dot(mat, [[self._x_coordinate], [self._y_coordinate]])
             self._x_coordinate = a[0][0] + off[0]
             self._y_coordinate = a[1][0] + off[1]
+        print str(self.image_path) + " was rotated by " + str(degrees) + "°."
         return self
 
 
@@ -253,12 +258,13 @@ class Jsrt(object):
 
     @staticmethod
     def _load_images_from_file(filenames, directory):
-        """This function load images (not image) located at directory/filename and creates an image object from it.
+        """ This function load images (not image) located at directory/filename and creates an image object from it.
         Args:
             filenames (list): a list of names of the image files.
             directory  (str): path to the directory/folder where all images are present
         Returns:
             a list of JsrtImage objects
+
         """
         images_list = []
         for image_name in filenames:
@@ -268,9 +274,10 @@ class Jsrt(object):
         return images_list
 
     def clean_csv_file(self, file_path, file_type):
-        """This function cleans the csv data present along with the image file. The data is removed of inappropriate
+        """ This function cleans the csv data present along with the image file. The data is removed of inappropriate
         splits and combined into a 10 element list for images with nodules and 4 element list for images without
         nodules.
+
         csv content is formatted into [filename, degree of subtlety, nodule size [mm], age, sex, x coordinate
         of the nodule, y coordinate of the nodule, pathology, position, diagnosis] format for images with nodules
         and [filename, age, sex, diagnosis("non-nodule")] format for non-nodule images respectively.
@@ -325,7 +332,7 @@ class Jsrt(object):
             image.add_description(csv_data[image.image_path], has_nodule=False)
 
     def get_images(self, has_nodule=True, num_of_images=1):
-        """This function gives "num_of_images" number of JsrtImage objects in a list. The objects can be either all
+        """ This function gives "num_of_images" number of JsrtImage objects in a list. The objects can be either all
         image with nodules or non-nodules.
 
         Args:
@@ -335,6 +342,7 @@ class Jsrt(object):
 
         Returns:
             a list of JsrtImage objects. Total objects will be num_of_images.
+
         """
         if has_nodule is True:
             if len(self._has_nodule_image_list) < num_of_images:
@@ -349,7 +357,7 @@ class Jsrt(object):
 
     @staticmethod
     def save_images(dataset, filename):
-        """This function saves the jsrt image dataset into TFRecords format. Currently the function stores only the
+        """ This function saves the jsrt image dataset into TFRecords format. Currently the function stores only the
         image, its height, width, x and y coordinates of the nodule.
 
         Args:
@@ -360,6 +368,7 @@ class Jsrt(object):
             jsrtdata = Jsrt().read_images("./All247images/")
             train_images = jsrtdata.get_images(num_of_images=50)
             jsrtdata.save_images(train_images, "train_images.tfrecords")
+
         """
         if dataset is None:
             raise ValueError('None obtained as dataset value')
@@ -400,7 +409,7 @@ class Jsrt(object):
 
     @staticmethod
     def read_images(filename):
-        """This function reads the JsrtImage objects stored in TFrecords file. Currently function only reads the
+        """ This function reads the JsrtImage objects stored in TFrecords file. Currently function only reads the
         image, its height, width, x and y coordinates of the nodule.
 
         Args:
@@ -481,7 +490,7 @@ class Jsrt(object):
 
     @staticmethod
     def rotate_image(image_list, rotate_angles):
-        """This function does a rotation of the images present in the image_list with all angles given in rotate_angles
+        """ This function does a rotation of the images present in the image_list with all angles given in rotate_angles
         and it also changes the x coordinate and y coordinate of the lung nodule in the image appropriately.
 
         See Also: JsrtImage.rotate
@@ -538,8 +547,6 @@ class Jsrt(object):
                   " and has nodule case is " +\
                   str(len(self._has_nodule_image_list))
 
-        print str(len(self._non_nodule_image_list))
-        print str(len(self._has_nodule_image_list))
         if rotate is True:
             rotated_images_list = self.rotate_image(self._non_nodule_image_list, rotate_angles=rotate_angles)
             for images in rotated_images_list:
