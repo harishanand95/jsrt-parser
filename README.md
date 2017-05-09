@@ -2,19 +2,47 @@
 This is a data parser to obtain images and descriptions from JSRT database in a uniform format for deep learning applications.
 
 Expected features:
-- [ ]  Scale, rotate and resize images to augment the dataset.
+- [ ]  Image transfornations to increase the dataset size:
 
-        The training and validation sets will be augmented by applying a number of image transformations: 
-            1. Horizontal reflection
-            2. Rotation by 2°-10°
-            3. Translation of 3 pixels in cardinal or ordinal directions (Optional: not sure of its consequence to image)
-            4. Pixel spread (swap each pixel with a random adjacent pixel)
-            5. Noise reduction (replace each pixel with the value just before or after the median value in a neighborhood of 2 or 5 pixels)
-            6. Random noise addition.
+     The training and validation sets will be augmented by applying a number of image transformations: 
+     - [x] Horizontal reflection
+         
+                jsrtdata = Jsrt().load_images("./All247images/")
+                nodule_images = jsrtdata.get_images(num_of_images=3, has_nodule=True)
+                
+                # reflects only a single image
+                nodule_images[0].horizontal_reflection()
+                nodule_images[0].display()
+                
+                # reflects a list of images present in `nodule_images`. 
+                jsrtdata.horizontally_reflect_images(nodule_images)
+                
+                # reflects all the loaded images and increases the dataset.
+                jsrtdata.augment_images(horizontal_reflection=True, rotate=False)        
+
+     - [x] Rotation by 2°-10°
+     
+                jsrtdata = Jsrt().load_images("./All247images/")
+                nodule_images = jsrtdata.get_images(num_of_images=3, has_nodule=True)
+                
+                # rotates a single image by 2°
+                nodule_images[0].rotate(2)
+                nodule_images[0].display()
+                
+                # rotates a list of images in `nodule_images` by 2° and 3°
+                jsrtdata.rotate_image(nodule_images, [2, 3])
+                
+                # rotates all the loaded images by 2° and 3°, and increases the dataset.
+                jsrtdata.augment_images(horizontal_reflection=False, rotate=True, rotate_angles=[1, 2])
+                
+     - [ ] Translation of 3 pixels in cardinal or ordinal directions (Optional: not sure of its consequence to image)
+     - [ ] Pixel spread (swap each pixel with a random adjacent pixel)
+     - [ ] Noise reduction (replace each pixel with the value just before or after the median value in a neighborhood of 2 or 5 pixels)
+     - [ ] Random noise addition.
             
      In total, each image can serve as the progenitor of 106 child images with the label inherited from the parent image. 
      
-     This is an attempt to augment the images similar to the one mentioned in High-Throughput Classification of Radiographs Using Deep Convolutional Neural Networks by Alvin Rajkomar & Sneha Lingam & Andrew G. Taylor & Michael Blum & John Mongan.
+ This is an attempt to augment the images similar to the one mentioned in _High-Throughput Classification of Radiographs   Using Deep Convolutional Neural Networks by Alvin Rajkomar & Sneha Lingam & Andrew G. Taylor & Michael Blum & John Mongan_.
      
      https://link.springer.com/article/10.1007/s10278-016-9914-9
 
@@ -34,7 +62,9 @@ Expected features:
         img.display()
       
     ![picture alt](https://raw.githubusercontent.com/harishanand95/jsrt-parser/master/test_image.png "lung nodule marked")
-- [ ]  Implement a method to find new location of the nodule during an image's horizontal flip.
+
+- [x]  Implement a method to find new location of the nodule during an image's rotation.
+- [x]  Implement a method to find new location of the nodule during an image's horizontal flip.
 - [x]  Option to load and save the images into a binary format.
 
         jsrtdata = Jsrt().load_images("./All247images/")
@@ -54,5 +84,6 @@ Expected features:
         if save_pic[0].y == read_pic[0].y: print "True"
         
         # You should get 5 True statement as results, which confirms that the values are same.
+
 - [ ]  Separate out test dataset from train and validation set.
 - [ ]  (Optional) Implement a method to get a zoomed portion of the image given the coordinates to zoom and image size. Required for attention based models.
