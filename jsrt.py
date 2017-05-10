@@ -223,6 +223,35 @@ class JsrtImage(object):
         print str(self.image_path) + " was rotated by " + str(degrees) + "°."
         return self
 
+    def glimpse(self, size, x, y):
+        if x < 0 or y < 0:
+            raise ValueError("incorrect x, y coordinates")
+        left_offset = 0
+        right_offset = size
+        top_offset = 0
+        bottom_offset = size
+        size //= 2
+        left_x = x - size
+        top_y = y - size
+        if x - size < 0:
+            left_offset = size - x
+            left_x = 0
+        if y - size < 0:
+            top_offset = size - y
+            top_y = 0
+        if x + size > 2048:
+            right_offset = size + 2048 - x
+        if y + size > 2048:
+            bottom_offset = size + 2048 - y
+
+        crop = np.zeros((size*2, size*2), dtype=">i2")
+        width = right_offset - left_offset
+        height = bottom_offset - top_offset
+
+        crop[top_offset: bottom_offset, left_offset: right_offset] = \
+            self.image[top_y: top_y + height, left_x: left_x + width]
+        return crop
+
 
 class Jsrt(object):
     """ Jsrt is a model to fetch all the images and augment them."""
