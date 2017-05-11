@@ -69,6 +69,7 @@ Expected features:
 
         jsrtdata = Jsrt().load_images("./All247images/")
         save_pic = jsrtdata.get_images(num_of_images=1)
+        
         # write image to test.tfrecords
         jsrtdata.save_images(save_pic, "test.tfrecords")
         
@@ -86,4 +87,17 @@ Expected features:
         # You should get 5 True statement as results, which confirms that the values are same.
 
 - [ ]  Separate out test dataset from train and validation set.
-- [ ]  (Optional) Implement a method to get a zoomed portion of the image given the coordinates to zoom and image size. Required for attention based models.
+- [ ]  (Optional) Implement a method to get a zoomed portion of the image given the coordinates to zoom and image size.                Required for attention based models.
+- [x]  Implement a method to obtain cropped image at a given location of any size from the image.
+  
+          jsrtdata = Jsrt().load_images("./All247images/")
+          nodule_images = jsrtdata.get_images(num_of_images=1, has_nodule=True)
+          
+          # crop out from image a picture of size 1200 at location 0,0 as center.
+          image = nodule_images[0].crop(1200, 0, 0)     
+          
+          plt.imshow(image, cmap=plt.get_cmap('gray'))
+          plt.show()
+          
+     ![picture alt](https://raw.githubusercontent.com/harishanand95/jsrt-parser/master/crop_image.png "crop image")
+        
