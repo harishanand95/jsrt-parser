@@ -1,6 +1,10 @@
 # jsrt-parser
 This is a data parser to obtain images and descriptions from JSRT database in a uniform format for deep learning applications.
 
+The attempted idea and possible implementation methods are mentioned here:
+
+[ https://github.com/harishanand95/jsrt-parser/blob/master/Implementation_Idea_paper.pdf ]( https://github.com/harishanand95/jsrt-parser/blob/master/Implementation_Idea_paper.pdf )
+
 Expected features:
 - [ ]  Image transfornations to increase the dataset size:
 
