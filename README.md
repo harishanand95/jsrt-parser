@@ -5,6 +5,8 @@ The attempted idea and possible implementation methods are mentioned here:
 
 [ https://github.com/harishanand95/jsrt-parser/blob/master/Implementation_Idea_paper.pdf ]( https://github.com/harishanand95/jsrt-parser/blob/master/Implementation_Idea_paper.pdf )
 
+Completed dataset augmentation part can specifically increase dataset from 247 images to more than 2000 images by horizontal reflection, rotation by any degree, zooming to any location.
+
 Expected features:
 - [ ]  Image transfornations to increase the dataset size:
 
