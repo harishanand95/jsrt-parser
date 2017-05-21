@@ -271,7 +271,8 @@ class JsrtImage(object):
         return crop
 
     def down_sample(self, ratio):
-        """ This function down samples the image by `ratio` factor.
+        """ This function down samples the image by `ratio` factor. Image is re-sampled by a factor of
+        `ratio` with nearest interpolation.
 
         Args:
             ratio (float): ratio to which image is to be reduced.
@@ -279,7 +280,9 @@ class JsrtImage(object):
         Returns:
             new_image (array): image
         """
-        new_image = ndimage.zoom(self.image, ratio)
+        # order 0 nearest interpolation
+        # order 1 bilinear interpolation
+        new_image = ndimage.zoom(self.image, ratio, order=0)
         return new_image
 
 
