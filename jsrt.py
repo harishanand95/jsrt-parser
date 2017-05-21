@@ -270,6 +270,18 @@ class JsrtImage(object):
             self.image[top_y: top_y + height, left_x: left_x + width]
         return crop
 
+    def down_sample(self, ratio):
+        """ This function down samples the image by `ratio` factor.
+
+        Args:
+            ratio (float): ratio to which image is to be reduced.
+
+        Returns:
+            new_image (array): image
+        """
+        new_image = ndimage.zoom(self.image, ratio)
+        return new_image
+
 
 class Jsrt(object):
     """ Jsrt is a model to fetch all the images and augment them."""
