@@ -107,3 +107,22 @@ Expected features:
           
      ![picture alt](https://raw.githubusercontent.com/harishanand95/jsrt-parser/master/crop_image.png "crop image")
         
+- [x]  Downsampling of image. 
+
+     This is necessary as some CNN architectures (like inception) expects inputs in fixed (like 299x299) size.
+     
+          jsrtdata = Jsrt().load_images("./All247images/")
+          nodule_images = jsrtdata.get_images(num_of_images=3, has_nodule=True)
+
+          plt.subplot(121)
+          plt.title("Original")
+          plt.imshow(nodule_images[0].image, cmap=plt.get_cmap('gray'))
+
+          plt.imshow(image, cmap=plt.get_cmap('gray'))
+          plt.subplot(122)
+          plt.title("averaging over 80x80 blocks")
+          image = nodule_images[0].down_sample(1 / 25.6)
+          
+          plt.show()
+          
+     ![picture alt](https://raw.githubusercontent.com/harishanand95/jsrt-parser/master/down_sample_image.png "down sample image")
