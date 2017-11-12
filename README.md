@@ -3,8 +3,19 @@ This is a data parser to obtain images and descriptions from JSRT database in a 
 
 The currently completed dataset augmentation part can increase dataset from 247 images to more than 2000 images by horizontal reflection, rotation by any degree, zooming to any location.
 
+The attempted idea and possible implementation methods are mentioned here:
+
+[ https://github.com/harishanand95/jsrt-parser/blob/master/Implementation_Idea_paper.pdf ]( https://github.com/harishanand95/jsrt-parser/blob/master/Implementation_Idea_paper.pdf ) 
+
+This is an on-going project I'm working on. 
+I have been busy lately. 
+Contributions are welcome. I see this project as more of opensource application of an idea than a paper.
+
+Update: Completed dataset augmentation part. It can specifically increase dataset from 247 images to more than 2000 images by horizontal reflection, rotation by any degree, zooming to any location.
+
+
 Expected features:
-- [ ]  Image transfornations to increase the dataset size:
+- [ ]  Image transformations to increase the dataset size:
 
      The training and validation sets will be augmented by applying a number of image transformations: 
      - [x] Horizontal reflection
@@ -49,7 +60,7 @@ Expected features:
      https://link.springer.com/article/10.1007/s10278-016-9914-9
 
 
-- [ ]  Get random X type of images or just a random mix of images from dataset.
+- [ ]  Get random X type of images or just a random mix of images from the dataset.
 - [x]  Get image description and other attributes associated with each image.
 
         img = JsrtImage()
@@ -59,14 +70,14 @@ Expected features:
         print img.image_width
         print img.image_height
    
-- [x]  Display image with a marking over the location of lung nodule.
+- [x]  Display image with a marking over the location of the lung nodule.
 
         img.display()
       
     ![picture alt](https://raw.githubusercontent.com/harishanand95/jsrt-parser/master/test_image.png "lung nodule marked")
 
-- [x]  Implement a method to find new location of the nodule during an image's rotation.
-- [x]  Implement a method to find new location of the nodule during an image's horizontal flip.
+- [x]  Implement a method to find the new location of the nodule during an image's rotation.
+- [x]  Implement a method to find the new location of the nodule during an image's horizontal flip.
 - [x]  Option to load and save the images into a binary format.
 
         jsrtdata = Jsrt().load_images("./All247images/")
@@ -90,7 +101,7 @@ Expected features:
 
 - [ ]  Separate out test dataset from train and validation set.
 - [ ]  (Optional) Implement a method to get a zoomed portion of the image given the coordinates to zoom and image size.                Required for attention based models.
-- [x]  Implement a method to obtain cropped image at a given location of any size from the image.
+- [x]  Implement a method to obtain the cropped image at a given location of any size from the image.
   
           jsrtdata = Jsrt().load_images("./All247images/")
           nodule_images = jsrtdata.get_images(num_of_images=1, has_nodule=True)
